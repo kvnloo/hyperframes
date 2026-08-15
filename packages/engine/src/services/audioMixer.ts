@@ -41,6 +41,7 @@ import {
 import { chainTailSeconds } from "@hyperframes/core/audio-fx-tail";
 import { applyAudioFxChain, AudioFxRenderError } from "./audioFxRender.js";
 import type { AudioVolumeKeyframe } from "./audioMixer.types.js";
+import { clampAudioGain } from "@hyperframes/core/audio-gain";
 
 export type { AudioElement, MixResult } from "./audioMixer.types.js";
 
@@ -60,8 +61,7 @@ export type { AudioElement, MixResult } from "./audioMixer.types.js";
 export const MIXED_AUDIO_FILENAME = "audio.m4a";
 
 function clampVolume(volume: number): number {
-  if (!Number.isFinite(volume)) return 1;
-  return Math.max(0, Math.min(1, volume));
+  return clampAudioGain(volume);
 }
 
 function formatFilterNumber(value: number): string {

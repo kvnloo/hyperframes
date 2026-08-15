@@ -15,7 +15,6 @@ import http from "node:http";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { resolve } from "node:path";
-import { c } from "../ui/colors.js";
 import type { BrowserGpuMode } from "../browser/gpuPolicy.js";
 
 const execFileAsync = promisify(execFile);
@@ -285,24 +284,7 @@ export async function scanActiveServers(startPort = 3002): Promise<ActiveServer[
     const batchEnd = Math.min(batchStart + batchSize - 1, endPort);
     const ports = Array.from({ length: batchEnd - batchStart + 1 }, (_, i) => batchStart + i);
 
-    const results = await Promise.all(
-      ports.map(async (port) => {
-        const config = await probePort(port);
-        if (!config) return null;
-        const pid =
-          Number.isInteger(config.pid) && Number(config.pid) > 0
-            ? String(config.pid)
-            : await getProcessOnPort(port);
-        return {
-          port,
-          projectName: config.projectName,
-          projectDir: config.projectDir,
-          version: config.version,
-          pid,
-          browserGpuMode: config.browserGpuMode,
-        };
-      }),
-    );
+    const results = await Promise.all(ports.map((port) => activeServerOnPort(port)));
 
     for (const r of results) {
       if (r) servers.push(r);
@@ -310,6 +292,24 @@ export async function scanActiveServers(startPort = 3002): Promise<ActiveServer[
   }
 
   return servers;
+}
+
+/** Probe exactly one port and return its self-reported HyperFrames identity. */
+export async function activeServerOnPort(port: number): Promise<ActiveServer | null> {
+  const config = await probePort(port);
+  if (!config) return null;
+  const pid =
+    Number.isInteger(config.pid) && Number(config.pid) > 0
+      ? String(config.pid)
+      : await getProcessOnPort(port);
+  return {
+    port,
+    projectName: config.projectName,
+    projectDir: config.projectDir,
+    version: config.version,
+    pid,
+    browserGpuMode: config.browserGpuMode,
+  };
 }
 
 /**
@@ -416,16 +416,8 @@ export async function findPortAndServe(
         return { type: "already-running", port };
       }
       if (detection.type === "mismatch") {
-        console.log(
-          `  ${c.dim(`Port ${port} in use by HyperFrames project "${detection.projectName}" — skipping`)}`,
-        );
         continue;
       }
-    }
-
-    const pid = await getProcessOnPort(port);
-    if (pid) {
-      console.log(`  ${c.dim(`Port ${port} in use by PID ${pid} — skipping`)}`);
     }
   }
 

@@ -7,6 +7,7 @@ import {
 import { VOLUME_RANGE } from "../audioAutomation.js";
 import { swallow } from "./diagnostics";
 import { getDebugSurface } from "./globals.js";
+import { clampAudioGain } from "../audioGain.js";
 
 function normalizeRate(rate: number): number {
   if (!Number.isFinite(rate) || rate <= 0) return 1;
@@ -206,7 +207,7 @@ export class WebAudioTransport {
       sourceNode.playbackRate.value = safeRate;
 
       const gainNode = this._ctx.createGain();
-      gainNode.gain.value = volume;
+      gainNode.gain.value = clampAudioGain(volume);
 
       const elapsed = compositionTime - compositionStart;
       const scheduledAt = this._ctx.currentTime;
@@ -353,7 +354,7 @@ export class WebAudioTransport {
   }
 
   setElementVolume(el: HTMLMediaElement, volume: number): void {
-    const safeVolume = Math.max(0, Math.min(1, volume));
+    const safeVolume = clampAudioGain(volume);
     for (const source of this._activeSources) {
       if (source.el !== el) continue;
       try {

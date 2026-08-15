@@ -365,6 +365,25 @@ describe("syncRuntimeMedia", () => {
       expect(only).toBeCloseTo(0.55, 5);
     });
 
+    it("sends boosted author gain to Web Audio while keeping the native element legal", () => {
+      const clip = createMockClip({ start: 0, end: 10, volume: 3.98 });
+      Object.defineProperty(clip.el, "readyState", { value: 4, writable: true });
+      let transportGain = -1;
+
+      syncRuntimeMedia({
+        clips: [clip],
+        timeSeconds: 1,
+        playing: true,
+        playbackRate: 1,
+        onElementVolume: (_el, volume) => {
+          transportGain = volume;
+        },
+      });
+
+      expect(transportGain).toBeCloseTo(3.98, 5);
+      expect(clip.el.volume).toBe(1);
+    });
+
     /**
      * The render bakes the lane at CLIP-LOCAL time: prepareAudioTrack already
      * cut the wav with `-ss mediaStart`, so its t=0 is the clip's start, and

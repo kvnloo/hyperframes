@@ -257,6 +257,35 @@ describe("processCompositionAudio", () => {
     expect(filter).not.toContain("weights=");
   });
 
+  it("preserves authored clip gain above unity for quiet-source boosting", async () => {
+    const baseDir = mkdtempSync(join(tmpdir(), "hf-audio-base-"));
+    const workDir = mkdtempSync(join(tmpdir(), "hf-audio-work-"));
+    tempDirs.push(baseDir, workDir);
+    writeFileSync(join(baseDir, "quiet.wav"), "stub");
+
+    const result = await processCompositionAudio(
+      [
+        {
+          id: "quiet",
+          src: "quiet.wav",
+          start: 0,
+          end: 2,
+          mediaStart: 0,
+          layer: 0,
+          volume: 3.98,
+          type: "audio",
+        },
+      ],
+      baseDir,
+      workDir,
+      join(baseDir, "out.m4a"),
+      2,
+    );
+
+    expect(result.success).toBe(true);
+    expect(capturedFilterScripts[1]).toContain("volume=3.98");
+  });
+
   it("lets an FX tail run past the clip, still bounded by the composition", async () => {
     // A reverb is still decaying when the clip's own audio stops. Trimming at
     // the clip boundary is what cut every tail short in the render.
